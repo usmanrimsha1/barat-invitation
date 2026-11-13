@@ -516,11 +516,66 @@ function showSlide(index) {
     }
   }
 
+  // iPhones and in-app browsers can come back from another app (e.g. Google
+  // Maps) with the music "playing" but silent. Reloading the track before
+  // resuming gives it a fresh sound output. If the browser blocks playback,
+  // the music starts again on the guest's next tap anywhere on the page.
+  let waitingForTap = false;
+
+  function resumeOnNextTap() {
+    if (waitingForTap) return;
+    waitingForTap = true;
+    const onTap = (event) => {
+      document.removeEventListener("touchend", onTap, true);
+      document.removeEventListener("click", onTap, true);
+      waitingForTap = false;
+      // The music button handles its own tap.
+      if (event.target.closest && event.target.closest("#musicToggle")) return;
+      if (audio.paused) {
+        const retry = audio.play();
+        if (retry && retry.catch) retry.catch(updateMusicControl);
+      }
+    };
+    document.addEventListener("touchend", onTap, true);
+    document.addEventListener("click", onTap, true);
+  }
+
+  function restartAudio() {
+    const time = audio.currentTime || 0;
+    try {
+      audio.pause();
+      audio.load();
+      const seek = () => {
+        try {
+          audio.currentTime = time;
+        } catch (error) {
+          /* ignore */
+        }
+      };
+      if (audio.readyState >= 1) seek();
+      else audio.addEventListener("loadedmetadata", seek, { once: true });
+    } catch (error) {
+      /* ignore */
+    }
+    let attempt;
+    try {
+      attempt = audio.play();
+    } catch (error) {
+      resumeOnNextTap();
+      return;
+    }
+    if (attempt && attempt.then) {
+      attempt.then(updateMusicControl).catch(() => {
+        updateMusicControl();
+        resumeOnNextTap();
+      });
+    }
+  }
+
   function resumeFromBackground() {
     if (resumeOnReturn && document.visibilityState === "visible") {
       resumeOnReturn = false;
-      const attempt = audio.play();
-      if (attempt && attempt.catch) attempt.catch(updateMusicControl);
+      restartAudio();
     }
   }
 
