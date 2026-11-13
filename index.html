@@ -15,6 +15,67 @@
       }
     </script>
 
+    <!-- Always start on the "tap to open" screen when the page is reloaded:
+         stop the browser restoring the old scroll position or a #hash. -->
+    <script>
+      (function () {
+        var root = document.documentElement;
+        function toTop() {
+          var old = root.style.scrollBehavior;
+          root.style.scrollBehavior = "auto";
+          window.scrollTo(0, 0);
+          root.style.scrollBehavior = old;
+        }
+        try {
+          if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+        } catch (e) {}
+        if (location.hash) {
+          try {
+            history.replaceState(null, "", location.pathname + location.search);
+          } catch (e) {}
+        }
+        toTop();
+        window.addEventListener("DOMContentLoaded", toTop);
+        window.addEventListener("load", toTop);
+        window.addEventListener("beforeunload", toTop);
+        // In-page links (e.g. the scroll arrow) scroll smoothly without
+        // adding #welcome to the address, so a reload starts at the top.
+        document.addEventListener(
+          "click",
+          function (event) {
+            var link = event.target.closest && event.target.closest('a[href^="#"]');
+            if (!link) return;
+            var id = link.getAttribute("href").slice(1);
+            var target = id && document.getElementById(id);
+            if (!target) return;
+            event.preventDefault();
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+          },
+          true
+        );
+      })();
+    </script>
+    <!-- Text on the invitation cannot be selected or copied by long-press. -->
+    <style>
+      html,
+      body {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      input,
+      textarea,
+      select,
+      [contenteditable="true"] {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+      }
+    </style>
+
     <title>Usman &amp; Rimsha — Barat Invitation</title>
     <meta
       name="description"
